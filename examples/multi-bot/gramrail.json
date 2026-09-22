@@ -1,0 +1,66 @@
+{
+  "database": ".gramrail/gramrail.sqlite",
+  "bots": [
+    {
+      "id": "support-a",
+      "name": "support-a",
+      "modules": [
+        "forms",
+        "approvals"
+      ],
+      "admin_ids": [
+        1
+      ],
+      "review_chat_id": 1,
+      "forms": [
+        {
+          "name": "submission",
+          "title": "New submission",
+          "fields": [
+            {
+              "name": "title",
+              "prompt": "What is its title?"
+            },
+            {
+              "name": "url",
+              "prompt": "What is its URL?",
+              "kind": "url"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "support-b",
+      "name": "Support B",
+      "modules": [
+        "forms",
+        "approvals"
+      ],
+      "admin_ids": [
+        2
+      ],
+      "review_chat_id": 2,
+      "forms": [
+        {
+          "name": "submission",
+          "title": "New submission",
+          "fields": [
+            {
+              "name": "title",
+              "prompt": "What is its title?"
+            },
+            {
+              "name": "url",
+              "prompt": "What is its URL?",
+              "kind": "url"
+            }
+          ]
+        }
+      ],
+      "token_env": "TELEGRAM_BOT_B_TOKEN",
+      "webhook_secret_env": "TELEGRAM_BOT_B_WEBHOOK_SECRET",
+      "api_key_env": "GRAMRAIL_BOT_B_KEY"
+    }
+  ]
+}

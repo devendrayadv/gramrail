@@ -1,0 +1,22 @@
+name: Bug report
+description: Report a reproducible problem without sharing credentials.
+title: "bug: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and expected behavior
+      description: Never include tokens or production user data.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include version, environment, commands, and a redacted example.
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Checks already performed

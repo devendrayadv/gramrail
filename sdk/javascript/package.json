@@ -1,0 +1,16 @@
+{
+  "name": "@gramrail/client",
+  "version": "0.1.0-alpha.1",
+  "description": "Framework-independent JavaScript client for the GramRail runtime.",
+  "type": "module",
+  "main": "index.mjs",
+  "types": "index.d.ts",
+  "exports": {".": {"types": "./index.d.ts", "import": "./index.mjs"}, "./relay": "./relay.mjs"},
+  "files": ["index.mjs", "index.d.ts", "relay.mjs", "README.md"],
+  "engines": {"node": ">=18"},
+  "scripts": {"test": "node --test test.mjs"},
+  "license": "MIT",
+  "author": "dev",
+  "repository": {"type": "git", "url": "https://github.com/devendrayadv/gramrail", "directory": "sdk/javascript"},
+  "private": true
+}

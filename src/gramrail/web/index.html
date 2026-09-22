@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GramRail Console</title>
+  <link rel="stylesheet" href="/console/style.css">
+  <script src="/console/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/console"><span class="mark">G</span><span>GramRail<small>APPLICATION CONSOLE</small></span></a>
+    <label for="bot-select" class="label">WORKSPACE BOT</label>
+    <select id="bot-select" disabled aria-label="Select a bot"><option>Connect to get started</option></select>
+    <nav aria-label="Console sections">
+      <button class="nav active" data-tab="overview">Overview</button>
+      <button class="nav" data-tab="jobs">Jobs &amp; delivery</button>
+      <button class="nav" data-tab="workflows">Workflows</button>
+      <button class="nav" data-tab="events">Activity</button>
+    </nav>
+    <div class="sidebar-note"><strong>One connected system.</strong><p>Follow an interaction from the first message to its recorded result.</p></div>
+    <footer>Open source · by dev<br><span>0.1.0 alpha</span></footer>
+  </aside>
+  <main>
+    <header><div><p class="eyebrow">BUILD. REUSE. UNDERSTAND.</p><h1 id="page-title">Your bot, in focus.</h1><p class="intro">Inspect work, test an interaction, and see what happened.</p></div><span id="mode" class="badge">Disconnected</span></header>
+    <section id="connect-panel" class="panel connect-panel">
+      <div><h2>Connect to your runtime</h2><p>Use an administrator or bot-scoped API key. It stays in this page's memory, never in browser storage.</p></div>
+      <form id="connect-form"><label for="api-key" class="sr-only">Runtime API key</label><input id="api-key" type="password" autocomplete="off" placeholder="Paste runtime API key" required><button type="submit" class="primary">Connect</button></form>
+    </section>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <div id="toolbar" hidden><span id="freshness">Not refreshed</span><button id="refresh" class="secondary">Refresh</button><button id="disconnect" class="secondary">Disconnect</button></div>
+    <section id="overview" class="view">
+      <div class="metrics"><article><p>Queued</p><strong id="queued-count">—</strong><small>Waiting in the latest job snapshot</small></article><article><p>Running</p><strong id="running-count">—</strong><small>Claimed by a worker</small></article><article><p>Needs attention</p><strong id="attention-count">—</strong><small>Failed or uncertain outcomes</small></article></div>
+      <div class="two-column"><section class="panel"><p class="eyebrow">CAPABILITIES</p><h2>Start with one useful module.</h2><div id="modules"><p class="muted">Connect to see this bot's enabled modules.</p></div></section>
+      <section class="panel" id="simulation-panel"><p class="eyebrow">SAFE DEVELOPMENT</p><h2>Try a conversation.</h2><p>No real Telegram messages are sent in simulation mode. Demo reviewer ID: 1.</p><form id="simulate-form"><div class="input-row"><label for="user-id">User ID</label><input id="user-id" type="number" min="1" max="9007199254740991" value="1001" required></div><label for="message">Message</label><div class="input-row"><input id="message" placeholder="/start, /submit, or an answer" required maxlength="4000"><button class="primary" type="submit" disabled id="simulate-send">Send</button></div></form><div class="chips"><button data-message="/start">/start</button><button data-message="/submit">/submit</button><button data-message="/back">/back</button><button data-message="/cancel">/cancel</button></div></section></div>
+      <section class="panel"><div class="section-heading"><div><p class="eyebrow">RECENT OUTPUT</p><h2>Messages prepared by your bot</h2></div><span class="muted">Queue status is not a read receipt</span></div><div id="messages" class="empty">A conversation will appear here after your bot handles an update.</div></section>
+    </section>
+    <section id="jobs" class="view" hidden><section class="panel"><h2>Jobs &amp; delivery</h2><p>Latest 100 jobs. An uncertain outcome requires investigation; do not blindly resend.</p><div id="job-list" class="empty">No jobs loaded.</div></section></section>
+    <section id="workflows" class="view" hidden><section class="panel"><h2>Saved workflows</h2><p>Definitions are pinned to each run. Refresh before making a decision.</p><div id="workflow-list" class="empty">No workflows loaded.</div></section></section>
+    <section id="events" class="view" hidden><section class="panel"><h2>Activity timeline</h2><p>Recorded transitions and queue events, ordered from newest to oldest.</p><div id="event-list" class="empty">No activity loaded.</div></section></section>
+    <p class="bottom-note">Alpha foundation. SQLite is a single-host backend. Native Telegram Serverless compatibility is experimental.</p>
+  </main>
+</body>
+</html>

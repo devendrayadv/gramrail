@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gramrail"
+version = "0.1.0a1"
+description = "Reusable features and a durable runtime for Telegram applications."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{name = "dev"}]
+keywords = ["telegram", "bots", "workflows", "jobs", "serverless"]
+classifiers = ["Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Topic :: Software Development :: Libraries :: Application Frameworks"]
+dependencies = ["fastapi>=0.128,<1", "uvicorn>=0.40,<1", "httpx>=0.28,<1", "pydantic>=2.12,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=9,<10", "pytest-cov>=7,<8", "ruff>=0.14,<1", "mypy>=1.19,<2", "build>=1.3,<2"]
+
+[project.scripts]
+gramrail = "gramrail.cli:main"
+
+[project.urls]
+Repository = "https://github.com/devendrayadv/gramrail"
+Issues = "https://github.com/devendrayadv/gramrail/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+gramrail = ["schema.sql", "web/*", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S"]
+ignore = ["E501", "S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106", "S108", "S311"]
+"src/gramrail/cli.py" = ["S603"]
+
+[tool.mypy]
+python_version = "3.11"
+check_untyped_defs = true
+warn_unused_ignores = true
+no_implicit_optional = true
