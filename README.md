@@ -1,31 +1,65 @@
-# GramRail
+# GramRail — Telegram Bot Framework for Workflows and Background Jobs
 
 **Build a feature once. Reuse it across Telegram bots.**
 
-An open-source framework and self-hosted runtime by **dev**. Add saved forms,
-approvals, background jobs, and reliable execution records to an existing bot,
-or use the integrated runtime for a new one.
+GramRail is an MIT-licensed, open-source Telegram bot framework and self-hosted
+Python runtime for **saved forms, approval workflows, background jobs, and queued
+message delivery**. Use its Python components inside an existing application, or
+connect a separate backend through the Python, JavaScript, or Go HTTP client.
 
-**Status: 0.1.0 alpha.** This repository contains a working foundation, not a
-claim that the entire platform roadmap is finished. Review [current limits](docs/limitations.md)
-before using it with real users. No package has been published to PyPI or npm.
+Created and maintained by **dev** ([devendrayadv](https://github.com/devendrayadv)).
+GramRail is an independent project, not an official Telegram product.
 
-## Try it without a Telegram token
+[Quick start](#quick-start-without-a-telegram-token) ·
+[Examples](#example-applications) ·
+[API guide](docs/api.md) ·
+[FAQ](docs/faq.md) ·
+[Limitations](docs/limitations.md) ·
+[Roadmap](ROADMAP.md)
 
-Requires Python 3.11 or newer. From this repository:
+> **Alpha: `0.1.0a1`.** The features below describe the current implementation,
+> not the full roadmap. Native Telegram Serverless deployment is **not verified**.
+> Install from this repository; GramRail has not been published to PyPI or npm.
+
+## What problem does GramRail solve?
+
+A bot often needs more than a reply handler: remember a user's answers, send a
+submission to an administrator, hand slow work to another process, and record
+whether the result was delivered. GramRail provides reusable components for those
+steps without requiring your business logic to live inside a new bot framework.
+
+| Your application needs to… | GramRail provides | Read the implementation contract |
+|---|---|---|
+| Remember a multi-step conversation | Saved forms with validation, back/cancel, and expiry checks | [Forms and approvals](docs/modules.md) |
+| Collect and review submissions | Administrator-checked approval decisions and queued notifications | [Directory example](examples/directory/README.md) |
+| Run work outside a message handler | Persistent jobs with priorities, claim leases, progress, and bounded retries | [Job API](docs/api.md) |
+| Save a process before waiting for its next event | Version-pinned state machines with revision checks and transactional job creation | [Workflow implementation](src/gramrail/workflows.py) |
+| Handle repeated requests and interrupted workers | Bot-scoped deduplication and rejection of stale worker completions | [Reliability contract](docs/reliability.md) |
+| See what happened to a request | A local console for jobs, workflow state, and recorded activity | [Offline quick start](#quick-start-without-a-telegram-token) |
+
+**Enqueuing a job is not the same as completing it.** A worker must claim and
+execute custom jobs. An accepted Telegram send is not a read receipt, and an
+uncertain network result is not silently treated as a safe automatic resend.
+
+## Quick start without a Telegram token
+
+Requires **Git and Python 3.11+**. These shell commands are for macOS or Linux;
+Windows activation instructions are in the [setup guide](docs/getting-started.md).
 
 ```bash
+git clone https://github.com/devendrayadv/gramrail.git
+cd gramrail
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install -e '.[dev]'
+python -m pip install -e .
 gramrail dev
 ```
 
 Open **http://127.0.0.1:8080/console** and paste the temporary development key
-printed by the command. The key stays in browser memory. No Telegram API calls
-are made in this mode, and a separate simulation database is used.
+printed in the terminal. The key stays in the page's memory. Simulation uses a
+separate local database and does not call the Telegram Bot API.
 
-Try this conversation as user **1001**:
+As simulated user **1001**, send these messages one at a time:
 
 ```text
 /start
@@ -34,13 +68,19 @@ My useful bot
 https://example.com
 ```
 
-Then change the simulator's user ID to **1** and press **Approve** on the review
-message. Inspect the saved workflow, queued notifications, and activity timeline.
-A queued or simulated message is not proof of real delivery or a read receipt.
+Switch the simulator's user ID to **1** and press **Approve** on the review
+message. Inspect the saved decision, notification jobs, and activity timeline.
+Those IDs are demonstration values, not your real administrator configuration.
 
-## Already have a bot?
+**Before live use:** configure real administrator IDs, credentials, and exactly
+one update receiver. Follow [live setup](docs/getting-started.md) and
+[security guidance](SECURITY.md); do not expose runtime keys in a public app.
 
-Keep its framework and business database. Start with one component:
+## Add background jobs to an existing bot
+
+You can keep your current bot framework and business database. This Python
+example adds a persistent job without starting an HTTP server or sending a
+Telegram message:
 
 ```python
 from gramrail import JobQueue, Store
@@ -52,75 +92,59 @@ job = queue.enqueue(
     {"report_id": "report-1042"},
     dedupe_key="report-1042",
 )
-print(job["id"])
+print(job["id"], job["state"])
 ```
 
-Use the HTTP SDK when the runtime and worker are separate processes or services:
+Reusing the same key with identical job input returns the existing job within
+that bot's scope; changing the input produces a conflict. This does not make
+external processing or message sending exactly once.
 
-```python
-import os
-from gramrail.client import Client
+To execute work in a separate process, follow the
+[Python report-worker example](examples/report-worker/README.md). Its HTTP client
+claims a job, reports progress, and saves completion. It is a finite example,
+not a production worker supervisor.
 
-with Client(
-    "http://127.0.0.1:8080",
-    os.environ["GRAMRAIL_BOT_KEY"],
-    "my-bot",
-) as rail:
-    job = rail.enqueue("reports.generate", {"report_id": "report-1042"}, dedupe_key="report-1042")
-```
-
-Python, [JavaScript](sdk/javascript/README.md), and [Go](sdk/go/README.md) clients
-speak the same API. SDKs provide access to the runtime; they do not make every
-language execute inside Telegram Serverless.
-
-## What works now
-
-| Capability | What it does |
+| Integration | Current scope |
 |---|---|
-| Durable job queue | Bot-scoped idempotency keys, priorities, scheduled availability, retry budgets, leases, heartbeat, and progress. |
-| Fenced job completion | Rejects completion from expired or replaced workers. External side effects still require application-level idempotency. |
-| Explicit workflows | Version-pinned state-machine definitions, revision checks, idempotent signals, and atomic transition/job creation. |
-| Forms module | Saved questions, text/integer/URL/choice validation, isolated user sessions, back/cancel, and expiry checks. |
-| Approvals module | Form-to-review flow, configured administrator checks, one accepted decision, and recorded notification jobs. |
-| Telegram delivery | Text, callback answers, and keyboard removal; conservative throttling, `retry_after`, and explicit uncertain outcomes. |
-| Ingress | Authenticated webhook or guarded polling; transactional update deduplication and effects. |
-| Multi-bot API | Separate keys and bot-scoped records. A root key is intentionally cross-bot. |
-| Local console | Offline conversation simulation, jobs, workflow inspection, and activity. |
-| CLI | `init`, `add`, `dev`, `serve`, `doctor`, `poll`, `backup`, and local `test`. |
-| SDKs | Python and JavaScript clients; a smaller Go client plus a generic request method. |
-| Serverless relay | A tested Fetch-subset relay contract; native Telegram Serverless deployment is **not verified**. |
+| [Python library](src/gramrail/__init__.py) | Storage, job queue, and workflow components on one host |
+| [Python HTTP client](src/gramrail/client.py) | Submit and inspect work through a running GramRail API |
+| [JavaScript client](sdk/javascript/README.md) | ES-module HTTP client with TypeScript declarations |
+| [Go client](sdk/go/README.md) | Standard-library HTTP client; fewer convenience methods than Python/JavaScript |
+| [Serverless relay](docs/serverless.md) | Experimental forwarding helper; native Telegram runtime compatibility is unverified |
 
-**Not yet shipped:** distributed storage, arbitrary-code durable replay, hosted
-fleet provisioning, Mini App interfaces, customer-facing staff roles, custom
-plugin installation, broadcast campaigns, media processing, support inboxes,
-and production incident replay. These remain in [ROADMAP.md](ROADMAP.md).
+**Keeping MongoDB or MySQL:** your application can retain them for business data.
+GramRail's own state currently uses SQLite; native MongoDB/MySQL storage adapters
+are not included. Remote workers use the HTTP API, not a shared SQLite file.
 
-## How it fits together
+## How GramRail fits into a Telegram bot
 
 ```text
-Your webhook / guarded polling / compatible serverless relay
-                         |
-                   GramRail API
-                         |
-          +--------------+---------------+
-          |              |               |
-        Forms         Workflows      Custom jobs
-          |              |               |
-      Approvals      Saved state     Python / JS / Go workers
-          |              |               |
-          +--------------+---------------+
-                         |
-               Telegram delivery queue
-                         |
-                  Telegram Bot API
+One update receiver: webhook, polling, or compatible relay
+                            |
+                 GramRail API and modules
+                            |
+             Forms / approvals / saved workflows
+                            |
+              Persistent jobs on local SQLite
+                   /                    \
+        Custom backend workers      Telegram delivery
+        Python / JavaScript / Go    Text and callbacks
+                   \                    /
+                    Console and activity records
 ```
 
-There is one Telegram Bot API update receiver per token. Workers claim jobs
-from GramRail; they do not compete with the receiver through `getUpdates`.
-The SQLite backend runs on one host. Do not mount its database over a network
-filesystem or advertise it as a distributed cluster.
+Polling and webhooks are alternative ways to receive Telegram Bot API updates.
+GramRail workers claim **GramRail jobs**; they do not run competing Telegram
+polling listeners. See the [delivery FAQ](docs/faq.md#does-gramrail-use-webhooks-or-long-polling)
+and [architecture](docs/architecture.md).
 
-## Create a new bot application
+For the service deployment, the current storage design is **one runtime host with
+local SQLite**. Workers may connect remotely over HTTPS. This is not a distributed
+database, and the SQLite file must not be mounted over a network filesystem.
+
+## Create and inspect a new bot project
+
+After installing GramRail, create a project in a new directory:
 
 ```bash
 gramrail init my-bot
@@ -128,58 +152,99 @@ cd my-bot
 gramrail dev
 ```
 
-The generated config includes demo reviewer IDs. Replace those before using a
-real bot. Environment files are **not loaded automatically**.
+`init` includes the forms-and-approvals demo. `add` enables supported built-ins
+and their dependencies; it is not a third-party package installer.
 
-```bash
-gramrail add approvals --bot my-bot
-gramrail doctor
-gramrail doctor --telegram
-```
-
-`doctor --telegram` calls only `getMe` and `getWebhookInfo`. Startup and diagnosis
-never silently set/delete webhooks or discard pending updates.
-
-See [live setup](docs/getting-started.md) before `gramrail serve --live`.
-
-## Documentation
-
-- [Getting started](docs/getting-started.md): simulation, existing-bot adoption, and explicit live setup.
-- [Architecture](docs/architecture.md): boundaries, data ownership, trust, and transaction design.
-- [API guide](docs/api.md): authentication, request examples, jobs, workflows, and error semantics.
-- [Reliability contract](docs/reliability.md): leases, duplicates, uncertain sends, and recovery.
-- [Modules](docs/modules.md): built-ins, dependency resolution, and extension direction.
-- [Deployment](docs/deployment.md): single-host operation, secrets, backups, and restoration.
-- [Serverless](docs/serverless.md): what is actually supported and what still needs live verification.
-- [Limitations](docs/limitations.md): current boundaries and unsupported claims.
-- [Verification](docs/verification.md): checks actually run and checks not run.
-
-The runtime exposes an OpenAPI schema at `/openapi.json` and interactive API
-reference at `/api/docs`. The interactive reference uses upstream Swagger UI
-assets; the application console itself has no external assets.
-
-## Examples
-
-| Example | What it demonstrates |
+| Command | What it does |
 |---|---|
-| [Directory submissions](examples/directory/README.md) | Reuse forms and approvals for a bot directory. |
-| [Report worker](examples/report-worker/README.md) | Enqueue background work, claim it from Python, and save a result. |
-| [Multiple bots](examples/multi-bot/README.md) | Separate API keys, admins, sessions, jobs, and decisions. |
-| [Serverless relay](examples/serverless/README.md) | Delegate complete updates without starting a second Telegram listener. |
+| `gramrail add approvals --bot my-bot` | Enable the built-in approval module and its forms dependency |
+| `gramrail doctor` | Inspect configuration, configured key requirements, and local database state |
+| `gramrail doctor --telegram` | Also call `getMe` and `getWebhookInfo`; no webhook changes |
+| `gramrail backup snapshot.sqlite` | Create a new SQLite backup without overwriting an existing file |
+| `gramrail test` | Run local pytest after development dependencies are installed |
 
-## Contribute
+Environment files are **not loaded automatically**. Live delivery is explicit;
+startup and diagnosis never silently replace a webhook or discard pending updates.
+
+## Example applications
+
+| Example | What you can learn | What it does not claim |
+|---|---|---|
+| [Directory submissions](examples/directory/README.md) | Collect a title and URL, then approve or reject the submission | No automatic website publishing or safety checks of submitted URLs |
+| [Report worker](examples/report-worker/README.md) | Enqueue, claim, heartbeat, and complete a background job | No real report generation or worker supervision |
+| [Multiple bots](examples/multi-bot/README.md) | Reuse one runtime with separate bot keys, records, and reviewers | No automated customer onboarding or staff-role platform |
+| [Serverless relay](examples/serverless/README.md) | Forward a complete update to the runtime through an HTTP boundary | No verified native Telegram deployment or offline relay queue |
+
+## Current limits and reliability
+
+GramRail is a foundation to evaluate, not a production-certified platform.
+
+**Implemented:** saved forms, administrator approvals, explicit state-machine
+workflows, persistent jobs, text/callback delivery, bot-scoped API access, and
+local simulation. Job records distinguish queued, running, succeeded, failed,
+cancelled, and uncertain outcomes.
+
+**Not implemented:** distributed storage, arbitrary-code durable replay,
+recurring calendar schedules, running-task cancellation, full broadcast campaigns,
+media processing, support inboxes, Mini App interfaces, fleet provisioning, or
+third-party plugin installation. See the [roadmap](ROADMAP.md).
+
+**Important boundaries:** no exactly-once external side-effect guarantee; no
+unlimited hosting or throughput promise. Bot API keys are trusted backend
+credentials, not public-user authentication. The root operator key can access
+all configured bots.
+
+Read [limitations](docs/limitations.md), the
+[reliability contract](docs/reliability.md), and the
+[recorded verification report](docs/verification.md) before connecting real users.
+The report separates completed checks from unverified environments and features.
+
+## Frequently asked questions
+
+**Can I use GramRail with an existing Python or Go bot?** Yes, through explicit
+library or HTTP-client integration. It does not automatically convert an existing
+project or provide a drop-in adapter for every framework.
+
+**Does GramRail run Python inside Telegram Serverless?** No. The runtime is
+self-hosted Python. The experimental relay is a separate integration boundary;
+it does not change the language supported by Telegram's hosted runtime.
+
+**Is GramRail free?** The source is available under the MIT license. Hosting,
+external APIs, and any paid Telegram features are separate costs.
+
+**When might I not need it?** A simple bot that only responds to commands may
+not need another runtime. Evaluate GramRail when you need its saved forms,
+approvals, job processing, or execution records.
+
+Read the [full FAQ](docs/faq.md) for restart recovery, duplicate input, database
+choices, multi-bot boundaries, scheduling, and message-delivery guarantees.
+
+## Documentation and source
+
+| Start here | Deeper references |
+|---|---|
+| [Getting started](docs/getting-started.md) | [Architecture](docs/architecture.md) |
+| [Forms and approvals](docs/modules.md) | [HTTP API and errors](docs/api.md) |
+| [FAQ](docs/faq.md) | [Reliability contract](docs/reliability.md) |
+| [Deployment and backups](docs/deployment.md) | [Serverless integration status](docs/serverless.md) |
+| [Limitations](docs/limitations.md) | [Verification](docs/verification.md) |
+
+A running runtime serves its OpenAPI schema at `/openapi.json` and interactive
+API documentation at `/api/docs`. Source and tests are in
+[`src/gramrail`](src/gramrail) and [`tests`](tests).
+
+## Contributing and license
+
+From the repository root, install development dependencies and run local checks:
 
 ```bash
-python -m pytest
-node --test sdk/javascript/test.mjs
-(cd sdk/go && go test -race ./... && go vet ./...)
+python -m pip install -e '.[dev]'
 python scripts/check.py
 ```
 
-Tests run locally. This repository contains no GitHub Actions workflows.
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+The check script also requires Node.js and Go for their SDK tests. It does not
+use GitHub Actions. See [CONTRIBUTING.md](CONTRIBUTING.md) and
+[SECURITY.md](SECURITY.md) for contribution and reporting guidelines.
 
-## License and attribution
-
-MIT. Copyright 2026 **dev**. See [LICENSE](LICENSE) and [AUTHORS.md](AUTHORS.md).
-This project is independent and is not affiliated with Telegram.
+MIT. Copyright 2026 **dev**. See [LICENSE](LICENSE), [AUTHORS.md](AUTHORS.md), and
+[CHANGELOG.md](CHANGELOG.md). GramRail is not affiliated with Telegram.
